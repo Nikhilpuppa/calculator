@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE_NAME = 'calculator'
+        DOCKER_IMAGE_TAG = 'chandranikhil/calculator:latest'
         GITHUB_REPO_URL = 'https://github.com/Nikhilpuppa/calculator.git'
     }
 
@@ -19,33 +20,33 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Build Docker image
-                    docker.build("${DOCKER_IMAGE_NAME}", '.')
+                    // Build Docker image and tag it right away
+                    def customImage = docker.build("${DOCKER_IMAGE_TAG}", '.')
                 }
             }
         }
 
         stage('Push Docker Images') {
             steps {
-                script{
-                    docker.withRegistry('', 'DockerHubCred') {
-                    sh 'docker tag calculator chandranikhil/calculator:latest'
-                    sh 'docker push chandranikhil/calculator:latest'
-                    }
-                 }
-            }
-        }
-
-   stage('Run Ansible Playbook') {
-            steps {
                 script {
-                    ansiblePlaybook(
-                        playbook: 'deploy.yml',
-                        inventory: 'inventory'
-                     )
+                    // Push the image to Docker Hub
+                    docker.withRegistry('', 'DockerHubCred') {
+                        sh "docker push ${DOCKER_IMAGE_TAG}"
+                    }
                 }
             }
         }
 
+        stage('Run Ansible Playbook') {
+            steps {
+                script {
+                    // Run the Ansible playbook
+                    ansiblePlaybook(
+                        playbook: 'deploy.yml',
+                        inventory: 'inventory'
+                    )
+                }
+            }
+        }
     }
 }
